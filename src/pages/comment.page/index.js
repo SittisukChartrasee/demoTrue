@@ -4,26 +4,33 @@ import {ItemComment} from '../../components';
 import styles from './index.styles';
 
 export default ({route}) => {
+  const [loading, setLoading] = React.useState(false);
   const [dataA, SetdataA] = React.useState([]);
-  const [dataB, SetdataB] = React.useState([]);
   const itemId = route?.params?.itemId;
   const title = route?.params?.title;
   const body = route?.params?.body;
+
   const getApi = async () => {
-    const result = await fetch(
+    setLoading(true);
+    const dataSet = [];
+    const apiHolder = await fetch(
       `https://jsonplaceholder.typicode.com/posts/${itemId | 1}/comments`,
     );
-    const json = await result.json();
+    const resHolder = await apiHolder.json();
 
-    const data = [];
-    json.forEach(async (d) => {
-      const resultB = await fetch('https://randomuser.me/api/');
-      const jsonB = await resultB.json();
-
-      data.push({...d, image: jsonB.results[0].picture.large});
-      console.log(d, jsonB);
-      SetdataA(data);
-    });
+    for (const [key, iterator] of resHolder.entries()) {
+      const apiRandomUser = await fetch('https://randomuser.me/api/');
+      const apiUsers = await apiRandomUser.json();
+      dataSet.push({
+        ...iterator,
+        image: apiUsers.results[0].picture.large,
+        email: apiUsers.results[0].email,
+        name:
+          apiUsers.results[0].name.first + ' ' + apiUsers.results[0].name.last,
+      });
+    }
+    setLoading(false);
+    SetdataA(dataSet);
   };
 
   React.useEffect(() => {

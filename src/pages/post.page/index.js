@@ -1,34 +1,45 @@
 import React from 'react';
-import {View, Text, FlatList, TouchableOpacity} from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
 import {Item} from '../../components';
 import styles from './index.styles';
 
 export default ({navigation}) => {
-  const [dataA, SetdataA] = React.useState([]);
-  const [count, SetCount] = React.useState(4);
-  const getApi = async () => {
-    const result = await fetch('https://jsonplaceholder.typicode.com/posts');
-    const json = await result.json();
+  const [loading, setLoading] = React.useState(false);
+  const [data, setData] = React.useState([]);
+  const [count, SetCount] = React.useState(0);
 
-    const data = [];
-    json.forEach(async (d) => {
-      const resultB = await fetch('https://randomuser.me/api/');
-      const jsonB = await resultB.json();
+  const getApi = async (limit = 1) => {
+    setLoading(true);
+    const dataSet = [];
+    const apiHolder = await fetch('https://jsonplaceholder.typicode.com/posts');
+    const resHolder = await apiHolder.json();
 
-      data.push({
-        ...d,
-        ...{
-          image: jsonB.results[0].picture.large,
-          email: jsonB.results[0].email,
-          name: jsonB.results[0].name.first + ' ' + jsonB.results[0].name.last,
-        },
+    for (const [key, iterator] of resHolder.entries()) {
+      const apiRandomUser = await fetch('https://randomuser.me/api/');
+      const apiUsers = await apiRandomUser.json();
+      dataSet.push({
+        ...iterator,
+        image: apiUsers.results[0].picture.large,
+        email: apiUsers.results[0].email,
+        name:
+          apiUsers.results[0].name.first + ' ' + apiUsers.results[0].name.last,
       });
-      SetdataA(data);
-    });
+      if (key === limit - 1) {
+        break;
+      }
+    }
+    setLoading(false);
+    setData(dataSet);
   };
 
   React.useEffect(() => {
-    getApi();
+    getApi(1);
   }, []);
 
   const onNext = (item) => {
@@ -41,22 +52,31 @@ export default ({navigation}) => {
   };
 
   const onLoadMore = () => {
-    if (count > dataA.length) {
-      alert('โหลดหมดแล้วครับ');
-      SetCount(count);
-    }
-    SetCount((pre) => pre + 4);
+    SetCount((pre) => {
+      const number = pre + 2;
+      getApi(number);
+      return number;
+    });
+  };
+
+  const onRefresh = () => {
+    getApi(1);
   };
 
   return (
     <View style={styles.Container}>
       <FlatList
-        data={dataA.slice(0, count)}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+        }
+        data={data}
+        inverted
         renderItem={(val) => Item(onNext)(val)}
         keyExtractor={(d) => d.id.toString()}
+        decelerationRate="fast"
       />
       <TouchableOpacity onPress={onLoadMore} style={styles.buttonLoadMore}>
-        <Text style={styles.text}>Load more </Text>
+        <Text style={styles.text}>Load more {data.length} </Text>
       </TouchableOpacity>
     </View>
   );
